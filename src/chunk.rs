@@ -20,6 +20,7 @@ impl OpCode {
 pub struct Chunk {
     pub code: Vec<u8>,
     pub constants: Vec<Value>,
+    pub lines: Vec<usize>,
 }
 
 impl Chunk {
@@ -27,11 +28,13 @@ impl Chunk {
         Chunk {
             code: Vec::new(),
             constants: Vec::new(),
+            lines: Vec::new(),
         }
     }
 
-    pub fn write_chunk(&mut self, byte: u8) {
+    pub fn write_chunk(&mut self, byte: u8, line: usize) {
         self.code.push(byte);
+        self.lines.push(line);
     }
 
     /// Add a constant and return the index it is stored at

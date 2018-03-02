@@ -13,6 +13,14 @@ pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
 pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     print!("{:04} ", offset);
 
+    let line = chunk.lines[offset];
+    let previous_line = if offset > 0 { chunk.lines[offset - 1] } else { 0 };
+    if line == previous_line {
+        print!("   | ");
+    } else {
+        print!("{:4} ", line);
+    }
+
     let instruction = OpCode::from_byte(chunk.code[offset]);
     match instruction {
         Some(o @ OpCode::Return) => simple_instruction(o, offset),
@@ -32,6 +40,6 @@ fn simple_instruction(opcode: OpCode, offset: usize) -> usize {
 fn constant_instruction(opcode: OpCode, chunk: &Chunk, offset: usize) -> usize {
     let constant = chunk.code[offset + 1];
     let value = chunk.constants[constant as usize];
-    println!("OpCode::{:?} {:04} '{}'", opcode, constant, value);
+    println!("OpCode::{:?} {:4} '{}'", opcode, constant, value);
     offset + 2
 }
