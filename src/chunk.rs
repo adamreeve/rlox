@@ -1,8 +1,10 @@
 use num_traits::FromPrimitive;
+use ::value::Value;
 
 #[derive(Debug,Copy,Clone,Primitive)]
 pub enum OpCode {
-    Return = 0
+    Return = 0,
+    Constant = 1,
 }
 
 impl OpCode {
@@ -16,17 +18,25 @@ impl OpCode {
 }
 
 pub struct Chunk {
-    pub code: Vec<u8>
+    pub code: Vec<u8>,
+    pub constants: Vec<Value>,
 }
 
 impl Chunk {
     pub fn new() -> Chunk {
         Chunk {
-            code: Vec::new()
+            code: Vec::new(),
+            constants: Vec::new(),
         }
     }
 
     pub fn write_chunk(&mut self, byte: u8) {
         self.code.push(byte);
+    }
+
+    /// Add a constant and return the index it is stored at
+    pub fn add_constant(&mut self, value: Value) -> u8 {
+        self.constants.push(value);
+        (self.constants.len() - 1) as u8
     }
 }
