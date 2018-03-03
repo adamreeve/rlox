@@ -1,3 +1,4 @@
+extern crate byteorder;
 #[macro_use]
 extern crate enum_primitive_derive;
 extern crate num_traits;
@@ -12,9 +13,9 @@ use chunk::OpCode;
 fn main() {
     let mut chunk = Chunk::new();
 
-    let constant = chunk.add_constant(value::Value::new(1.2));
-    chunk.write_chunk(OpCode::Constant.as_byte(), 123);
-    chunk.write_chunk(constant, 123);
+    for i in 0..260 {
+        chunk.write_constant(value::Value::new((i * 2) as f64), 123);
+    }
 
     chunk.write_chunk(OpCode::Return.as_byte(), 123);
 

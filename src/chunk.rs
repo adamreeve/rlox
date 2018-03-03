@@ -1,10 +1,13 @@
 use num_traits::FromPrimitive;
+use byteorder::{LittleEndian, WriteBytesExt};
+
 use ::value::Value;
 
 #[derive(Debug,Copy,Clone,Primitive)]
 pub enum OpCode {
     Return = 0,
     Constant = 1,
+    ConstantLong = 2,
 }
 
 impl OpCode {
@@ -37,9 +40,23 @@ impl Chunk {
         self.lines.push(line);
     }
 
-    /// Add a constant and return the index it is stored at
-    pub fn add_constant(&mut self, value: Value) -> u8 {
+    pub fn write_constant(&mut self, value: Value, line: usize) {
+        // if we have over 256 constants, need to start
+        // saving using load long instructions
         self.constants.push(value);
-        (self.constants.len() - 1) as u8
+        let constant_index = self.constants.len() - 1;
+        if constant_index > 255  {
+            self.write_chunk(OpCode::ConstantLong.as_byte(), line);
+            let constant_index = (self.constants.len() - 1) as u32;
+            self.code.write_u32::<LittleEndian>(constant_index).unwrap();
+            for _ in 0..4 {
+                self.lines.push(line);
+            }
+        }
+        else
+        {
+            self.write_chunk(OpCode::Constant.as_byte(), line);
+            self.write_chunk(constant_index as u8, line);
+        }
     }
 }
