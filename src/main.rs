@@ -5,6 +5,7 @@ extern crate num_traits;
 
 mod chunk;
 mod debug;
+mod util;
 mod value;
 
 use chunk::Chunk;
