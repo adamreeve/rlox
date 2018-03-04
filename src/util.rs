@@ -14,15 +14,15 @@ pub struct RunLengthIterator<'a, T: 'a> {
 }
 
 impl<T> RunLength<T> {
-    pub fn new(value: T) -> RunLength<T> {
+    pub fn new(value: T, run_length: usize) -> RunLength<T> {
         RunLength {
-            value: value,
-            run_length: 1
+            value,
+            run_length,
         }
     }
 
-    pub fn increment(&mut self) {
-        self.run_length += 1;
+    pub fn increment_by(&mut self, increment: usize) {
+        self.run_length += increment
     }
 }
 
@@ -34,14 +34,18 @@ impl<T: PartialEq> RunLengthEncoded<T> {
     }
 
     pub fn push(&mut self, value: T) {
+        self.push_run(value, 1);
+    }
+
+    pub fn push_run(&mut self, value: T, count: usize) {
         let continue_run = match self.run_lengths.last() {
             Some(run_length) if run_length.value == value => true,
             _ => false
         };
         if continue_run {
-            self.run_lengths.last_mut().unwrap().increment();
+            self.run_lengths.last_mut().unwrap().increment_by(count);
         } else {
-            self.run_lengths.push(RunLength::new(value));
+            self.run_lengths.push(RunLength::new(value, count));
         }
     }
 }
@@ -61,6 +65,7 @@ impl<'a, T: 'a> IntoIterator for &'a RunLengthEncoded<T> {
 
 impl<'a, T: 'a> Iterator for RunLengthIterator<'a, T> {
     type Item = &'a T;
+
     fn next(&mut self) -> Option<&'a T> {
         let num_run_lengths = self.run_length_encoded.run_lengths.len();
         // First get return value
