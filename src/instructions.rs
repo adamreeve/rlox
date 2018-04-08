@@ -8,6 +8,10 @@ pub enum OpCode {
     Constant = 1,
     ConstantLong = 2,
     Negate = 3,
+    Add = 4,
+    Subtract = 5,
+    Multiply = 6,
+    Divide = 7,
 }
 
 impl OpCode {

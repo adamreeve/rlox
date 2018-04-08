@@ -36,6 +36,9 @@ impl<'a> VirtualMachine<'a> {
             }
             let instruction = self.read_byte();
             match instruction {
+                Some(OpCode::Add) => {
+                    self.binary_op(|a, b| {a + b});
+                },
                 Some(OpCode::Constant) => {
                     let value = self.read_constant();
                     self.push(value);
@@ -44,6 +47,12 @@ impl<'a> VirtualMachine<'a> {
                     let value = self.read_constant_long();
                     self.push(value);
                 },
+                Some(OpCode::Divide) => {
+                    self.binary_op(|a, b| {a / b});
+                },
+                Some(OpCode::Multiply) => {
+                    self.binary_op(|a, b| {a * b});
+                },
                 Some(OpCode::Negate) => {
                     let value = self.pop();
                     self.push(Value::new(-value.value()));
@@ -51,6 +60,9 @@ impl<'a> VirtualMachine<'a> {
                 Some(OpCode::Return) => {
                     println!("{}", self.pop());
                     return InterpretResult::Ok
+                },
+                Some(OpCode::Subtract) => {
+                    self.binary_op(|a, b| {a - b});
                 },
                 None => {
                     return InterpretResult::CompileError
@@ -65,6 +77,14 @@ impl<'a> VirtualMachine<'a> {
 
     fn pop(&mut self) -> Value {
         self.stack.pop().unwrap()
+    }
+
+    fn binary_op<F>(&mut self, binary_fn: F)
+        where F: Fn(f64, f64) -> f64
+    {
+        let b = self.pop();
+        let a = self.pop();
+        self.push(Value::new(binary_fn(a.value(), b.value())));
     }
 
     fn read_byte(&mut self) -> Option<OpCode> {

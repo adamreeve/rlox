@@ -17,7 +17,11 @@ use virtual_machine::VirtualMachine;
 fn main() {
     let mut chunk = Chunk::new();
 
-    chunk.write_constant(value::Value::new(0.123), 123);
+    chunk.write_constant(value::Value::new(1.2), 123);
+    chunk.write_constant(value::Value::new(3.4), 123);
+    chunk.write_instruction(SimpleInstruction::new(OpCode::Add), 123);
+    chunk.write_constant(value::Value::new(5.6), 123);
+    chunk.write_instruction(SimpleInstruction::new(OpCode::Divide), 123);
     chunk.write_instruction(SimpleInstruction::new(OpCode::Negate), 123);
     chunk.write_instruction(SimpleInstruction::new(OpCode::Return), 123);
 
