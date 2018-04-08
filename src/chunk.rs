@@ -17,7 +17,7 @@ impl Chunk {
         }
     }
 
-    pub fn write_instruction<I: Instruction>(&mut self, instruction: I, line: usize) {
+    pub fn write_instruction<I: InstructionWrite>(&mut self, instruction: I, line: usize) {
         let initial_code_len = self.code.len();
         instruction.write(&mut self.code);
         let new_code_len = self.code.len();

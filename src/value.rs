@@ -7,6 +7,10 @@ impl Value {
     pub fn new(val: f64) -> Value {
         Value(val)
     }
+
+    pub fn value(&self) -> f64 {
+        self.0
+    }
 }
 
 impl fmt::Display for Value {

@@ -49,9 +49,10 @@ fn disassemble_instruction_impl(
     reader.read(&mut opcode_byte).unwrap();
     let opcode = OpCode::from_byte(opcode_byte[0]);
     match opcode {
-        Some(o @ OpCode::Return) => simple_instruction(o),
         Some(o @ OpCode::Constant) => constant_instruction(o, chunk, reader),
         Some(o @ OpCode::ConstantLong) => constant_long_instruction(o, chunk, reader),
+        Some(o @ OpCode::Negate) => simple_instruction(o),
+        Some(o @ OpCode::Return) => simple_instruction(o),
         None => {
             println!("Unknown opcode: {}", opcode_byte[0]);
         }

@@ -11,14 +11,15 @@ mod value;
 mod virtual_machine;
 
 use chunk::Chunk;
-use instructions::ReturnInstruction;
+use instructions::{OpCode, SimpleInstruction};
 use virtual_machine::VirtualMachine;
 
 fn main() {
     let mut chunk = Chunk::new();
 
     chunk.write_constant(value::Value::new(0.123), 123);
-    chunk.write_instruction(ReturnInstruction::new(), 123);
+    chunk.write_instruction(SimpleInstruction::new(OpCode::Negate), 123);
+    chunk.write_instruction(SimpleInstruction::new(OpCode::Return), 123);
 
     debug::disassemble_chunk(&chunk, "test chunk");
 

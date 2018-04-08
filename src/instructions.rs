@@ -7,6 +7,7 @@ pub enum OpCode {
     Return = 0,
     Constant = 1,
     ConstantLong = 2,
+    Negate = 3,
 }
 
 impl OpCode {
@@ -19,31 +20,12 @@ impl OpCode {
     }
 }
 
-pub trait Instruction {
-    const OP_CODE: OpCode;
+pub trait InstructionRead {
     fn parse<R: Read>(reader: &mut R) -> Self;
+}
+
+pub trait InstructionWrite {
     fn write<W: Write>(&self, writer: &mut W);
-}
-
-pub struct ReturnInstruction {
-}
-
-impl ReturnInstruction {
-    pub fn new() -> ReturnInstruction {
-        ReturnInstruction { }
-    }
-}
-
-impl Instruction for ReturnInstruction {
-    const OP_CODE: OpCode = OpCode::Return;
-
-    fn parse<R: Read>(_: &mut R) -> ReturnInstruction {
-        ReturnInstruction {}
-    }
-
-    fn write<W: Write>(&self, writer: &mut W) {
-        writer.write(&[OpCode::Return.as_byte()]).unwrap();
-    }
 }
 
 pub struct ConstantInstruction {
@@ -56,9 +38,7 @@ impl ConstantInstruction {
     }
 }
 
-impl Instruction for ConstantInstruction {
-    const OP_CODE: OpCode = OpCode::Constant;
-
+impl InstructionRead for ConstantInstruction {
     fn parse<R: Read>(reader: &mut R) -> ConstantInstruction {
         let mut index = [0u8];
         reader.read(&mut index).unwrap();
@@ -66,7 +46,9 @@ impl Instruction for ConstantInstruction {
             constant_index: index[0],
         }
     }
+}
 
+impl InstructionWrite for ConstantInstruction {
     fn write<W: Write>(&self, writer: &mut W) {
         writer.write(&[OpCode::Constant.as_byte(), self.constant_index as u8]).unwrap();
     }
@@ -82,18 +64,34 @@ impl ConstantLongInstruction {
     }
 }
 
-impl Instruction for ConstantLongInstruction {
-    const OP_CODE: OpCode = OpCode::ConstantLong;
-
+impl InstructionRead for ConstantLongInstruction {
     fn parse<R: Read>(reader: &mut R) -> ConstantLongInstruction {
         let constant_index = reader.read_u32::<LittleEndian>().unwrap();
         ConstantLongInstruction {
             constant_index,
         }
     }
+}
 
+impl InstructionWrite for ConstantLongInstruction {
     fn write<W: Write>(&self, writer: &mut W) {
         writer.write(&[OpCode::ConstantLong.as_byte()]).unwrap();
         writer.write_u32::<LittleEndian>(self.constant_index).unwrap();
+    }
+}
+
+pub struct SimpleInstruction {
+    op_code: OpCode
+}
+
+impl SimpleInstruction {
+    pub fn new(op_code: OpCode) -> SimpleInstruction {
+        SimpleInstruction { op_code }
+    }
+}
+
+impl InstructionWrite for SimpleInstruction {
+    fn write<W: Write>(&self, writer: &mut W) {
+        writer.write(&[self.op_code.as_byte()]).unwrap();
     }
 }
