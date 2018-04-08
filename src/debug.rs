@@ -22,7 +22,7 @@ pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
     }
 }
 
-pub fn _disassemble_instruction(chunk: &Chunk, offset: usize) {
+pub fn disassemble_instruction(chunk: &Chunk, offset: usize) {
     let line = chunk.lines.into_iter().nth(offset).unwrap();
     let prev_line = if offset > 0 { chunk.lines.into_iter().nth(offset - 1) } else { None };
 
