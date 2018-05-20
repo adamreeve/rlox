@@ -13,6 +13,7 @@ struct Token<'a> {
     line: u32,
 }
 
+#[derive(Debug,PartialEq,Eq)]
 enum TokenType {
   LeftParen, RightParen,
   LeftBrace, RightBrace,
@@ -81,11 +82,27 @@ impl <'a> Scanner<'a> {
             return self.make_token(token_type)
         }
 
+        if c == '"' {
+            return self.string_token();
+        }
+
+        if is_digit(c) {
+            return self.number_token();
+        }
+
+        if is_alpha(c) {
+            return self.identifier_token();
+        }
+
         return self.error_token("Unexpected character");
     }
 
     fn peek(&self) -> Option<char> {
         self.remaining_source[self.current_offset..].chars().next()
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        self.remaining_source[self.current_offset..].chars().nth(1)
     }
 
     fn advance(&mut self) -> char {
@@ -120,47 +137,33 @@ impl <'a> Scanner<'a> {
     }
 
     fn skip_whitespace_and_comments(&mut self) {
-        let mut skip_count = 0;
-        let mut possible_comment = false;
-        let mut in_comment = false;
-        let mut reached_end = true;
-        for (index, c) in self.remaining_source[self.current_offset..].char_indices() {
-            if possible_comment && c != '/' {
-                // skip until start of previous character which was a /
-                reached_end = false;
-                break;
-            }
-
-            if c == '\n' {
-                self.line += 1;
-                if in_comment {
-                    in_comment = false;
+        loop {
+            if let Some(c) = self.peek() {
+                if c == ' ' || c == '\r' || c == '\t' {
+                    self.advance();
+                    continue;
                 }
+                if c == '\n' {
+                    self.line += 1;
+                    self.advance();
+                    continue;
+                }
+                if c == '/' {
+                    if self.peek_next() == Some('/') {
+                        while self.peek() != Some('\n') && !self.is_at_end() {
+                            self.advance();
+                        }
+                    }
+                    else {
+                        return;
+                    }
+                    continue;
+                }
+                return;
             }
-            if c.is_whitespace() {
-                continue;
+            else {
+                return;
             }
-            if c == '/' && possible_comment {
-                in_comment = true;
-                possible_comment = false;
-            }
-            else if c == '/' {
-                possible_comment = true;
-                skip_count = index;
-            }
-            else if !in_comment {
-                // Current char is non-whitespace and we're not in a comment
-                // so we don't want to skip any further
-                reached_end =  false;
-                skip_count = index;
-                break;
-            }
-        }
-        if reached_end {
-            self.current_offset += self.remaining_source.len();
-        }
-        else {
-            self.current_offset += skip_count;
         }
     }
 
@@ -179,6 +182,104 @@ impl <'a> Scanner<'a> {
             line: self.line
         }
     }
+
+    fn string_token(&mut self) -> Token {
+        while self.peek() != Some('"') && !self.is_at_end() {
+            if self.peek() == Some('\n') {
+                self.line += 1;
+            }
+            self.advance();
+        }
+        if self.is_at_end() {
+            return self.error_token("Unterminated string");
+        }
+        // Skip closing "
+        self.advance();
+        self.make_token(TokenType::String)
+    }
+
+    fn number_token(&mut self) -> Token {
+        while is_some_where(self.peek(), &is_digit) {
+            self.advance();
+        }
+        if self.peek() == Some('.') && is_some_where(self.peek_next(), &is_digit) {
+            // Consume '.'
+            self.advance();
+            while is_some_where(self.peek(), &is_digit) {
+                self.advance();
+            }
+        }
+        self.make_token(TokenType::Number)
+    }
+
+    fn identifier_token(&mut self) -> Token {
+        while is_some_where(self.peek(), &|c| {is_alpha(c) || is_digit(c)}) {
+            self.advance();
+        }
+        return self.make_token(self.identifier_type());
+    }
+
+    // Once we've scanned an identifier work out the actual token type
+    fn identifier_type(&self) -> TokenType {
+        match self.remaining_source.chars().next() {
+            Some('a') => self.check_keyword(1, "nd", TokenType::And),
+            Some('c') => self.check_keyword(1, "lass", TokenType::Class),
+            Some('e') => self.check_keyword(1, "lse", TokenType::Else),
+            Some('f') => match self.remaining_source.chars().nth(1) {
+                Some('a') => self.check_keyword(2, "lse", TokenType::False),
+                Some('o') => self.check_keyword(2, "r", TokenType::For),
+                Some('u') => self.check_keyword(2, "n", TokenType::Fun),
+                _ => TokenType::Identifier
+            }
+            Some('i') => self.check_keyword(1, "f", TokenType::If),
+            Some('n') => self.check_keyword(1, "il", TokenType::Nil),
+            Some('o') => self.check_keyword(1, "r", TokenType::Or),
+            Some('p') => self.check_keyword(1, "rint", TokenType::Print),
+            Some('r') => self.check_keyword(1, "eturn", TokenType::Return),
+            Some('s') => self.check_keyword(1, "uper", TokenType::Super),
+            Some('t') => match self.remaining_source.chars().nth(1) {
+                Some('h') => self.check_keyword(2, "is", TokenType::This),
+                Some('r') => self.check_keyword(2, "ue", TokenType::True),
+                _ => TokenType::Identifier
+            }
+            Some('v') => self.check_keyword(1, "ar", TokenType::Var),
+            Some('w') => self.check_keyword(1, "hile", TokenType::While),
+            _ => TokenType::Identifier
+        }
+    }
+
+    fn check_keyword(&self, start: usize, rest: &str, token_type: TokenType) -> TokenType {
+        let length_matches = self.current_offset == start + rest.len();
+        let all_chars_match = length_matches && self.remaining_source
+            .chars()
+            .skip(start)
+            .take(rest.len())
+            .zip(rest.chars())
+            .all(|(a, b)| a == b);
+        if all_chars_match { token_type } else { TokenType::Identifier }
+
+    }
+}
+
+fn is_digit(c: char) -> bool {
+    c >= '0' &&  c <= '9'
+}
+
+fn is_some_where<T: Copy>(x: Option<T>, predicate: &Fn(T) -> bool) -> bool {
+    match x {
+        Some(x) if predicate(x) => true,
+        _ => false,
+    }
+}
+
+fn is_alpha(c: char) -> bool {
+    c >= 'a' &&  c <= 'z'
+        || c >= 'A' && c <= 'Z'
+        || c == '_'
+}
+
+fn is_alphanumeric(c: char) -> bool {
+    is_alpha(c) || is_digit(c)
 }
 
 #[cfg(test)]
@@ -256,5 +357,81 @@ mod tests {
                 scanner.line, expected_line,
                 "Expected line to be {} after '{}' but was {}", expected_line, contents, scanner.line);
         }
+    }
+
+    #[test]
+    fn test_parse_single_characters() {
+        test_parse("(", TokenType::LeftParen, 1);
+        test_parse(")", TokenType::RightParen, 1);
+        test_parse("{", TokenType::LeftBrace, 1);
+        test_parse("}", TokenType::RightBrace, 1);
+        test_parse(";", TokenType::Semicolon, 1);
+        test_parse(",", TokenType::Comma, 1);
+        test_parse(".", TokenType::Dot, 1);
+        test_parse("-", TokenType::Minus, 1);
+        test_parse("+", TokenType::Plus, 1);
+        test_parse("/", TokenType::Slash, 1);
+        test_parse("*", TokenType::Star, 1);
+    }
+
+    #[test]
+    fn test_parse_multiple_characters() {
+        test_parse("<", TokenType::Less, 1);
+        test_parse(">", TokenType::Greater, 1);
+        test_parse("<1", TokenType::Less, 1);
+        test_parse(">2", TokenType::Greater, 1);
+        test_parse("<=", TokenType::LessEqual, 2);
+        test_parse(">=", TokenType::GreaterEqual, 2);
+        test_parse("! ", TokenType::Bang, 1);
+        test_parse("!=", TokenType::BangEqual, 2);
+        test_parse("=", TokenType::Equal, 1);
+        test_parse("=1", TokenType::Equal, 1);
+        test_parse("==", TokenType::EqualEqual, 2);
+    }
+
+    #[test]
+    fn test_parse_keywords() {
+        test_parse("and", TokenType::And, 3);
+        test_parse("class", TokenType::Class, 5);
+        test_parse("else", TokenType::Else, 4);
+        test_parse("false", TokenType::False, 5);
+        test_parse("for", TokenType::For, 3);
+        test_parse("fun", TokenType::Fun, 3);
+        test_parse("if", TokenType::If, 2);
+        test_parse("nil", TokenType::Nil, 3);
+        test_parse("or", TokenType::Or, 2);
+        test_parse("print", TokenType::Print, 5);
+        test_parse("return", TokenType::Return, 6);
+        test_parse("super", TokenType::Super, 5);
+        test_parse("this", TokenType::This, 4);
+        test_parse("true", TokenType::True, 4);
+        test_parse("var", TokenType::Var, 3);
+        test_parse("while", TokenType::While, 5);
+    }
+
+    #[test]
+    fn test_parse_identifiers() {
+        let test_cases = vec!["and1", "true_", "my_var", "my_var_2"];
+        for test_case in test_cases {
+            test_parse(test_case, TokenType::Identifier, test_case.len());
+        }
+    }
+
+    fn test_parse(source: &'static str, token_type: TokenType, end: usize) {
+        let mut scanner = Scanner {
+            remaining_source: source,
+            current_offset: 0,
+            line: 1
+        };
+        {
+            let token = scanner.scan_token();
+            assert_eq!(
+                token.token_type, token_type,
+                "Expected to get type {:?} but was {:?} when parsing '{}'", token_type, token.token_type, source);
+        }
+        let new_offset = scanner.current_offset;
+        assert_eq!(
+            new_offset, end,
+            "Expected offset to be {} but was {} when parsing '{}'", end, new_offset, source);
     }
 }
