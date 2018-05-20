@@ -1,34 +1,59 @@
 extern crate byteorder;
+extern crate clap;
 #[macro_use]
 extern crate enum_primitive_derive;
 extern crate num_traits;
 
 mod chunk;
+mod errors;
 mod instructions;
 mod debug;
 mod util;
 mod value;
 mod virtual_machine;
+mod compiler;
+mod scanner;
 
-use chunk::Chunk;
-use instructions::{OpCode, SimpleInstruction};
+use clap::{Arg, App};
+use errors::InterpretResult;
+use std::io::{self, BufRead, Read};
+use std::fs::File;
 use virtual_machine::VirtualMachine;
 
 fn main() {
-    let mut chunk = Chunk::new();
+    let args = App::new("rlox")
+        .about("Interpreter for the lox language")
+        .arg(Arg::with_name("input")
+             .help("Source file to run")
+             .index(1))
+        .get_matches();
 
-    chunk.write_constant(value::Value::new(1.2), 123);
-    chunk.write_constant(value::Value::new(3.4), 123);
-    chunk.write_instruction(SimpleInstruction::new(OpCode::Add), 123);
-    chunk.write_constant(value::Value::new(5.6), 123);
-    chunk.write_instruction(SimpleInstruction::new(OpCode::Divide), 123);
-    chunk.write_instruction(SimpleInstruction::new(OpCode::Negate), 123);
-    chunk.write_instruction(SimpleInstruction::new(OpCode::Return), 123);
+    let result = match args.value_of("input") {
+        Some(input_path) => run_file(input_path),
+        _ => run_repl()
+    };
 
-    debug::disassemble_chunk(&chunk, "test chunk");
+    if let Err(err) = result {
+        eprintln!("{}", err);
+        std::process::exit(1);
+    };
+}
 
-    println!("Interpreting");
+fn run_file(file_path: &str) -> InterpretResult<()> {
+    let mut f = File::open(file_path)?;
+    let mut contents = String::new();
+    f.read_to_string(&mut contents)?;
+    Ok(())
+}
 
-    let mut vm = VirtualMachine::new(&chunk);
-    vm.interpret();
+fn run_repl() -> InterpretResult<()> {
+    let stdin = io::stdin();
+    for line in stdin.lock().lines() {
+        interpret(&line?);
+    }
+    println!("");
+    Ok(())
+}
+
+fn interpret(line: &str) {
 }

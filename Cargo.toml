@@ -7,6 +7,7 @@ authors = ["Adam Reeve <adreeve@gmail.com>"]
 num-traits = "0.2"
 enum-primitive-derive = "0.1.2"
 byteorder = "1"
+clap = "2.31"
 
 [features]
 default = []

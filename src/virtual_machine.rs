@@ -1,5 +1,6 @@
 use std::io::{Cursor, Read};
 use ::chunk::Chunk;
+use ::errors::{InterpretError, InterpretResult};
 use ::instructions;
 use ::instructions::InstructionRead;
 use ::instructions::OpCode;
@@ -11,12 +12,6 @@ pub struct VirtualMachine<'a> {
     stack: Vec<Value>,
 }
 
-pub enum InterpretResult {
-    Ok,
-    CompileError,
-    RuntimeError
-}
-
 impl<'a> VirtualMachine<'a> {
     pub fn new(chunk: &Chunk) -> VirtualMachine {
         VirtualMachine {
@@ -26,7 +21,7 @@ impl<'a> VirtualMachine<'a> {
         }
     }
 
-    pub fn interpret(&mut self) -> InterpretResult {
+    pub fn interpret(&mut self) -> InterpretResult<()> {
         loop {
             #[cfg(feature="debug-trace-execution")]
             {
@@ -59,13 +54,14 @@ impl<'a> VirtualMachine<'a> {
                 },
                 Some(OpCode::Return) => {
                     println!("{}", self.pop());
-                    return InterpretResult::Ok
+                    return Ok(());
                 },
                 Some(OpCode::Subtract) => {
                     self.binary_op(|a, b| {a - b});
                 },
                 None => {
-                    return InterpretResult::CompileError
+                    let message = format!("Unrecognised op code: {:?}", instruction);
+                    return Err(InterpretError::CompileError(message));
                 },
             }
         }
