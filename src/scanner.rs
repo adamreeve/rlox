@@ -1,7 +1,7 @@
 struct Scanner<'a> {
     /// Source remaining to be scanned
     remaining_source: &'a str,
-    /// Offset to next character in terms of number of unicode characters
+    /// Offset to next character in bytes
     current_offset: usize,
     /// Current line
     line: u32,
@@ -48,9 +48,10 @@ impl <'a> Scanner<'a> {
     }
 
     pub fn scan_token(&mut self) -> Token {
-        self.skip_whitespace();
+        self.skip_whitespace_and_comments();
+        // Reset remaining source based on current offset
+        self.remaining_source = &self.remaining_source[self.current_offset..];
 
-        self.remaining_source = &self.remaining_source[self.current_offset_in_bytes()..];
         if self.is_at_end() {
             return self.make_token(TokenType::Eof);
         }
@@ -83,55 +84,90 @@ impl <'a> Scanner<'a> {
         return self.error_token("Unexpected character");
     }
 
+    fn peek(&self) -> Option<char> {
+        self.remaining_source[self.current_offset..].chars().next()
+    }
+
     fn advance(&mut self) -> char {
-        let next_char = self.remaining_source
-            .chars().nth(self.current_offset)
-            .expect("Unexpected EOF");
-        self.current_offset += 1;
+        let next_char = self.peek().expect("Unexpected EOF");
+        self.increment_offset();
         next_char
     }
 
     fn match_next(&mut self, test_char: char) -> bool {
-        let next_char = self.remaining_source
-            .chars().nth(self.current_offset);
-        match next_char {
-            Some(c) => {
-                if c == test_char {
-                    self.current_offset += 1;
-                    true
-                } else {
-                    false
-                }
+        match self.peek() {
+            Some(c) if c == test_char => {
+                self.increment_offset();
+                true
             }
-            None => false
+            _ => false
         }
+    }
+
+    fn increment_offset(&mut self) {
+        let remaining = &self.remaining_source[self.current_offset..];
+        // Get index of next character or if there is no next character
+        // we're at the end of the input
+        self.current_offset += remaining
+            .char_indices()
+            .map(|ci| ci.0)
+            .nth(1)
+            .unwrap_or(remaining.len());
     }
 
     fn is_at_end(&self) -> bool {
         self.current_offset >= self.remaining_source.len()
     }
 
-    fn skip_whitespace(&mut self) {
-        // TODO: Increment line count, skip comments too
-        let whitespace_count = self.remaining_source
-            .char_indices()
-            .take_while(|ci| ci.1.is_whitespace())
-            .map(|ci| ci.0)
-            .last().unwrap_or(0);
-        self.remaining_source = &self.remaining_source[whitespace_count..];
-    }
+    fn skip_whitespace_and_comments(&mut self) {
+        let mut skip_count = 0;
+        let mut possible_comment = false;
+        let mut in_comment = false;
+        let mut reached_end = true;
+        for (index, c) in self.remaining_source[self.current_offset..].char_indices() {
+            if possible_comment && c != '/' {
+                // skip until start of previous character which was a /
+                reached_end = false;
+                break;
+            }
 
-    fn current_offset_in_bytes(&self) -> usize {
-        match self.remaining_source.char_indices().nth(self.current_offset + 1) {
-            Some(char_index) => char_index.0,
-            None => self.remaining_source.len()
+            if c == '\n' {
+                self.line += 1;
+                if in_comment {
+                    in_comment = false;
+                }
+            }
+            if c.is_whitespace() {
+                continue;
+            }
+            if c == '/' && possible_comment {
+                in_comment = true;
+                possible_comment = false;
+            }
+            else if c == '/' {
+                possible_comment = true;
+                skip_count = index;
+            }
+            else if !in_comment {
+                // Current char is non-whitespace and we're not in a comment
+                // so we don't want to skip any further
+                reached_end =  false;
+                skip_count = index;
+                break;
+            }
+        }
+        if reached_end {
+            self.current_offset += self.remaining_source.len();
+        }
+        else {
+            self.current_offset += skip_count;
         }
     }
 
     fn make_token(&self, token_type: TokenType) -> Token {
         Token {
             token_type,
-            source: &self.remaining_source[..self.current_offset_in_bytes()],
+            source: &self.remaining_source[..self.current_offset],
             line: self.line
         }
     }
@@ -141,6 +177,84 @@ impl <'a> Scanner<'a> {
             token_type: TokenType::Error,
             source: message,
             line: self.line
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_skipping_whitespace_and_comments_before_more_tokens() {
+        let test_cases = vec![
+            ("a", 0),
+            ("  a", 2),
+            (" \t  a", 4),
+            (" \t  +", 4),
+            ("// Test a comment\nabc", 18),
+            (" // Test a comment\n+", 19),
+        ];
+        for (contents, expected_skip_count) in test_cases {
+            let mut scanner = Scanner {
+                remaining_source: contents,
+                current_offset: 0,
+                line: 1,
+            };
+            scanner.skip_whitespace_and_comments();
+
+            assert_eq!(
+                scanner.current_offset, expected_skip_count,
+                "Expected to skip {} bytes for '{}' but was {}", expected_skip_count, contents, scanner.current_offset);
+        }
+    }
+
+    #[test]
+    fn test_skipping_whitespace_and_comments_before_eof() {
+        let test_cases = vec![
+            ("", 0),
+            ("  ", 2),
+            (" \t  ", 4),
+            ("// Test a comment\n", 18),
+            (" // Test a comment", 18),
+        ];
+        for (contents, expected_skip_count) in test_cases {
+            let mut scanner = Scanner {
+                remaining_source: contents,
+                current_offset: 0,
+                line: 1,
+            };
+            scanner.skip_whitespace_and_comments();
+
+            assert_eq!(
+                scanner.current_offset, expected_skip_count,
+                "Expected to skip {} bytes for '{}' but was {}", expected_skip_count, contents, scanner.current_offset);
+        }
+    }
+
+    #[test]
+    fn test_incrementing_line_count() {
+        let test_cases = vec![
+            ("", 1),
+            ("  ", 1),
+            (" \n  ", 2),
+            (" \n  a", 2),
+            (" \n\n  ", 3),
+            ("// Test a comment\n", 2),
+            ("// Test a comment\na", 2),
+            (" // Test a comment", 1),
+        ];
+        for (contents, expected_line) in test_cases {
+            let mut scanner = Scanner {
+                remaining_source: contents,
+                current_offset: 0,
+                line: 1,
+            };
+            scanner.skip_whitespace_and_comments();
+
+            assert_eq!(
+                scanner.line, expected_line,
+                "Expected line to be {} after '{}' but was {}", expected_line, contents, scanner.line);
         }
     }
 }
