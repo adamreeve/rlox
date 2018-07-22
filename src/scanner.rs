@@ -1,4 +1,4 @@
-struct Scanner<'a> {
+pub struct Scanner<'a> {
     /// Source remaining to be scanned
     remaining_source: &'a str,
     /// Offset to next character in bytes
@@ -7,14 +7,14 @@ struct Scanner<'a> {
     line: u32,
 }
 
-struct Token<'a> {
-    token_type: TokenType,
-    source: &'a str,
-    line: u32,
+pub struct Token<'a> {
+    pub token_type: TokenType,
+    pub source: &'a str,
+    pub line: u32,
 }
 
-#[derive(Debug,PartialEq,Eq)]
-enum TokenType {
+#[derive(Debug,PartialEq,Eq,Copy,Clone)]
+pub enum TokenType {
   LeftParen, RightParen,
   LeftBrace, RightBrace,
   Comma, Dot, Minus, Plus,

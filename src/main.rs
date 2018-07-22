@@ -43,17 +43,21 @@ fn run_file(file_path: &str) -> InterpretResult<()> {
     let mut f = File::open(file_path)?;
     let mut contents = String::new();
     f.read_to_string(&mut contents)?;
+    interpret(&contents)?;
     Ok(())
 }
 
 fn run_repl() -> InterpretResult<()> {
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
-        interpret(&line?);
+        interpret(&line?)?;
     }
     println!("");
     Ok(())
 }
 
-fn interpret(line: &str) {
+fn interpret(line: &str) -> InterpretResult<()> {
+    let chunk = compiler::compile(line)?;
+    let mut vm = VirtualMachine::new(&chunk);
+    vm.interpret()
 }
