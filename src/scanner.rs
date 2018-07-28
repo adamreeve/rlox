@@ -4,13 +4,13 @@ pub struct Scanner<'a> {
     /// Offset to next character in bytes
     current_offset: usize,
     /// Current line
-    line: u32,
+    line: usize,
 }
 
 pub struct Token<'a> {
     pub token_type: TokenType,
     pub source: &'a str,
-    pub line: u32,
+    pub line: usize,
 }
 
 #[derive(Debug,PartialEq,Eq,Copy,Clone)]
@@ -48,7 +48,7 @@ impl <'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_token(&mut self) -> Token {
+    pub fn scan_token(&mut self) -> Token<'a> {
         self.skip_whitespace_and_comments();
         // Reset remaining source based on current offset
         self.remaining_source = &self.remaining_source[self.current_offset..];
@@ -167,7 +167,7 @@ impl <'a> Scanner<'a> {
         }
     }
 
-    fn make_token(&self, token_type: TokenType) -> Token {
+    fn make_token(&self, token_type: TokenType) -> Token<'a> {
         Token {
             token_type,
             source: &self.remaining_source[..self.current_offset],
@@ -183,7 +183,7 @@ impl <'a> Scanner<'a> {
         }
     }
 
-    fn string_token(&mut self) -> Token {
+    fn string_token(&mut self) -> Token<'a> {
         while self.peek() != Some('"') && !self.is_at_end() {
             if self.peek() == Some('\n') {
                 self.line += 1;
@@ -198,7 +198,7 @@ impl <'a> Scanner<'a> {
         self.make_token(TokenType::String)
     }
 
-    fn number_token(&mut self) -> Token {
+    fn number_token(&mut self) -> Token<'a> {
         while is_some_where(self.peek(), &is_digit) {
             self.advance();
         }
@@ -212,7 +212,7 @@ impl <'a> Scanner<'a> {
         self.make_token(TokenType::Number)
     }
 
-    fn identifier_token(&mut self) -> Token {
+    fn identifier_token(&mut self) -> Token<'a> {
         while is_some_where(self.peek(), &|c| {is_alpha(c) || is_digit(c)}) {
             self.advance();
         }
