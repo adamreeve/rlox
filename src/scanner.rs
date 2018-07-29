@@ -417,6 +417,35 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_parsing_expression() {
+        let source = "1 + 2";
+        let mut scanner = Scanner {
+            remaining_source: source,
+            current_offset: 0,
+            line: 1
+        };
+        {
+            let token = scanner.scan_token();
+            assert_eq!(token.source, "1", "Expected first token to be 1");
+            assert_eq!(token.token_type, TokenType::Number, "Expected first token to be a number");
+        }
+        {
+            let token = scanner.scan_token();
+            assert_eq!(token.source, "+", "Expected second token to be +");
+            assert_eq!(token.token_type, TokenType::Plus, "Expected second token to be plus");
+        }
+        {
+            let token = scanner.scan_token();
+            assert_eq!(token.source, "2", "Expected third token to be 2");
+            assert_eq!(token.token_type, TokenType::Number, "Expected third token to be a number");
+        }
+        {
+            let token = scanner.scan_token();
+            assert_eq!(token.token_type, TokenType::Eof, "Expected Eof token");
+        }
+    }
+
     fn test_parse(source: &'static str, token_type: TokenType, end: usize) {
         let mut scanner = Scanner {
             remaining_source: source,
