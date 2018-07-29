@@ -1,6 +1,8 @@
 pub struct Scanner<'a> {
-    /// Source remaining to be scanned
-    remaining_source: &'a str,
+    /// Source to be scanned
+    source: &'a str,
+    /// Offset to first character of current token in bytes
+    start_offset: usize,
     /// Offset to next character in bytes
     current_offset: usize,
     /// Current line
@@ -42,7 +44,8 @@ pub enum TokenType {
 impl <'a> Scanner<'a> {
     pub fn new(source: &str) -> Scanner {
         Scanner {
-            remaining_source: source,
+            source: source,
+            start_offset: 0,
             current_offset: 0,
             line: 1
         }
@@ -50,8 +53,7 @@ impl <'a> Scanner<'a> {
 
     pub fn scan_token(&mut self) -> Token<'a> {
         self.skip_whitespace_and_comments();
-        // Reset remaining source based on current offset
-        self.remaining_source = &self.remaining_source[self.current_offset..];
+        self.start_offset = self.current_offset;
 
         if self.is_at_end() {
             return self.make_token(TokenType::Eof);
@@ -98,11 +100,19 @@ impl <'a> Scanner<'a> {
     }
 
     fn peek(&self) -> Option<char> {
-        self.remaining_source[self.current_offset..].chars().next()
+        self.remaining_source().chars().next()
     }
 
     fn peek_next(&self) -> Option<char> {
-        self.remaining_source[self.current_offset..].chars().nth(1)
+        self.remaining_source().chars().nth(1)
+    }
+
+    fn remaining_source(&self) -> &'a str {
+        &self.source[self.current_offset..]
+    }
+
+    fn current_token_source(&self) -> &'a str {
+        &self.source[self.start_offset..self.current_offset]
     }
 
     fn advance(&mut self) -> char {
@@ -122,7 +132,7 @@ impl <'a> Scanner<'a> {
     }
 
     fn increment_offset(&mut self) {
-        let remaining = &self.remaining_source[self.current_offset..];
+        let remaining = self.remaining_source();
         // Get index of next character or if there is no next character
         // we're at the end of the input
         self.current_offset += remaining
@@ -133,7 +143,7 @@ impl <'a> Scanner<'a> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current_offset >= self.remaining_source.len()
+        self.current_offset >= self.source.len()
     }
 
     fn skip_whitespace_and_comments(&mut self) {
@@ -170,7 +180,7 @@ impl <'a> Scanner<'a> {
     fn make_token(&self, token_type: TokenType) -> Token<'a> {
         Token {
             token_type,
-            source: &self.remaining_source[..self.current_offset],
+            source: self.current_token_source(),
             line: self.line
         }
     }
@@ -221,11 +231,11 @@ impl <'a> Scanner<'a> {
 
     // Once we've scanned an identifier work out the actual token type
     fn identifier_type(&self) -> TokenType {
-        match self.remaining_source.chars().next() {
+        match self.current_token_source().chars().next() {
             Some('a') => self.check_keyword(1, "nd", TokenType::And),
             Some('c') => self.check_keyword(1, "lass", TokenType::Class),
             Some('e') => self.check_keyword(1, "lse", TokenType::Else),
-            Some('f') => match self.remaining_source.chars().nth(1) {
+            Some('f') => match self.current_token_source().chars().nth(1) {
                 Some('a') => self.check_keyword(2, "lse", TokenType::False),
                 Some('o') => self.check_keyword(2, "r", TokenType::For),
                 Some('u') => self.check_keyword(2, "n", TokenType::Fun),
@@ -237,7 +247,7 @@ impl <'a> Scanner<'a> {
             Some('p') => self.check_keyword(1, "rint", TokenType::Print),
             Some('r') => self.check_keyword(1, "eturn", TokenType::Return),
             Some('s') => self.check_keyword(1, "uper", TokenType::Super),
-            Some('t') => match self.remaining_source.chars().nth(1) {
+            Some('t') => match self.current_token_source().chars().nth(1) {
                 Some('h') => self.check_keyword(2, "is", TokenType::This),
                 Some('r') => self.check_keyword(2, "ue", TokenType::True),
                 _ => TokenType::Identifier
@@ -250,7 +260,7 @@ impl <'a> Scanner<'a> {
 
     fn check_keyword(&self, start: usize, rest: &str, token_type: TokenType) -> TokenType {
         let length_matches = self.current_offset == start + rest.len();
-        let all_chars_match = length_matches && self.remaining_source
+        let all_chars_match = length_matches && self.current_token_source()
             .chars()
             .skip(start)
             .take(rest.len())
@@ -298,7 +308,8 @@ mod tests {
         ];
         for (contents, expected_skip_count) in test_cases {
             let mut scanner = Scanner {
-                remaining_source: contents,
+                source: contents,
+                start_offset: 0,
                 current_offset: 0,
                 line: 1,
             };
@@ -321,7 +332,8 @@ mod tests {
         ];
         for (contents, expected_skip_count) in test_cases {
             let mut scanner = Scanner {
-                remaining_source: contents,
+                source: contents,
+                start_offset: 0,
                 current_offset: 0,
                 line: 1,
             };
@@ -347,7 +359,8 @@ mod tests {
         ];
         for (contents, expected_line) in test_cases {
             let mut scanner = Scanner {
-                remaining_source: contents,
+                source: contents,
+                start_offset: 0,
                 current_offset: 0,
                 line: 1,
             };
@@ -421,7 +434,8 @@ mod tests {
     fn test_parsing_expression() {
         let source = "1 + 2";
         let mut scanner = Scanner {
-            remaining_source: source,
+            source: source,
+            start_offset: 0,
             current_offset: 0,
             line: 1
         };
@@ -448,7 +462,8 @@ mod tests {
 
     fn test_parse(source: &'static str, token_type: TokenType, end: usize) {
         let mut scanner = Scanner {
-            remaining_source: source,
+            source: source,
+            start_offset: 0,
             current_offset: 0,
             line: 1
         };
