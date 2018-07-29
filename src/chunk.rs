@@ -1,6 +1,8 @@
-use ::value::Value;
+use std;
+use ::errors::{InterpretResult, InterpretError};
 use ::instructions::*;
 use ::util::RunLengthEncoded;
+use ::value::Value;
 
 pub struct Chunk {
     pub code: Vec<u8>,
@@ -24,17 +26,22 @@ impl Chunk {
         self.lines.push_run(line, new_code_len - initial_code_len);
     }
 
-    pub fn write_constant(&mut self, value: Value, line: usize) {
+    pub fn write_constant(&mut self, value: Value, line: usize) -> InterpretResult<()> {
         self.constants.push(value);
         let constant_index = self.constants.len() - 1;
         // Once we have over 256 constants, we need to start
         // saving constants using a constant long instruction:
-        if constant_index > 255  {
-            self.write_instruction(ConstantLongInstruction::new(constant_index as u32), line);
-        }
-        else
+        if constant_index <= std::u8::MAX as usize
         {
             self.write_instruction(ConstantInstruction::new(constant_index as u8), line);
+            Ok(())
+        }
+        else if constant_index > std::u32::MAX as usize  {
+            self.write_instruction(ConstantLongInstruction::new(constant_index as u32), line);
+            Ok(())
+        }
+        else {
+            Err(InterpretError::CompileError("Too many constants to store".to_string()))
         }
     }
 }

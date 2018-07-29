@@ -4,11 +4,12 @@ version = "0.1.0"
 authors = ["Adam Reeve <adreeve@gmail.com>"]
 
 [dependencies]
-num-traits = "0.2"
+num-traits = "0.2.5"
 enum-primitive-derive = "0.1.2"
 byteorder = "1"
 clap = "2.31"
 
 [features]
 default = []
+debug-print-code = []
 debug-trace-execution = []

@@ -32,8 +32,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) {
     disassemble_instruction_impl(chunk, &mut reader, prev_line, line);
 }
 
-fn disassemble_instruction_impl(
-        chunk: &Chunk, reader: &mut Cursor<&Vec<u8>>, prev_line: Option<&usize>, line: &usize) {
+fn disassemble_instruction_impl(chunk: &Chunk, reader: &mut Cursor<&Vec<u8>>, prev_line: Option<&usize>, line: &usize) {
     print!("{:04} ", reader.position());
 
     match prev_line {
