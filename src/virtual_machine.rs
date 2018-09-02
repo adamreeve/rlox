@@ -32,7 +32,7 @@ impl<'a> VirtualMachine<'a> {
             let instruction = self.read_byte();
             match instruction {
                 Some(OpCode::Add) => {
-                    self.binary_op(|a, b| {a + b});
+                    self.binary_op(|a, b| {a + b})?;
                 },
                 Some(OpCode::Constant) => {
                     let value = self.read_constant();
@@ -43,21 +43,28 @@ impl<'a> VirtualMachine<'a> {
                     self.push(value);
                 },
                 Some(OpCode::Divide) => {
-                    self.binary_op(|a, b| {a / b});
+                    self.binary_op(|a, b| {a / b})?;
                 },
                 Some(OpCode::Multiply) => {
-                    self.binary_op(|a, b| {a * b});
+                    self.binary_op(|a, b| {a * b})?;
                 },
                 Some(OpCode::Negate) => {
-                    let value = self.pop();
-                    self.push(Value::new(-value.value()));
+                    match self.peek(0) {
+                        Value::NumberValue(value) => {
+                            self.pop();
+                            self.push(Value::number(-value));
+                        },
+                        _ => {
+                            return self.runtime_error("Operand must be a number");
+                        }
+                    }
                 },
                 Some(OpCode::Return) => {
                     println!("{}", self.pop());
                     return Ok(());
                 },
                 Some(OpCode::Subtract) => {
-                    self.binary_op(|a, b| {a - b});
+                    self.binary_op(|a, b| {a - b})?;
                 },
                 None => {
                     let message = format!("Unrecognised op code: {:?}", instruction);
@@ -75,12 +82,20 @@ impl<'a> VirtualMachine<'a> {
         self.stack.pop().unwrap()
     }
 
-    fn binary_op<F>(&mut self, binary_fn: F)
+    fn peek(&self, distance: usize) -> Value {
+        self.stack[self.stack.len() - distance - 1]
+    }
+
+    fn binary_op<F>(&mut self, binary_fn: F) -> InterpretResult<()>
         where F: Fn(f64, f64) -> f64
     {
+        if !(self.peek(0).is_number() && self.peek(1).is_number()) {
+            return self.runtime_error("Operands must be numbers");
+        }
         let b = self.pop();
         let a = self.pop();
-        self.push(Value::new(binary_fn(a.value(), b.value())));
+        self.push(Value::number(binary_fn(a.as_number(), b.as_number())));
+        Ok(())
     }
 
     fn read_byte(&mut self) -> Option<OpCode> {
@@ -97,5 +112,17 @@ impl<'a> VirtualMachine<'a> {
     fn read_constant_long(&mut self) -> Value {
         let instruction = instructions::ConstantLongInstruction::parse(&mut self.cursor);
         self.chunk.constants[instruction.constant_index as usize]
+    }
+
+    fn reset_stack(&mut self) {
+        self.stack.clear();
+    }
+
+    fn runtime_error(&mut self, message: &str) -> InterpretResult<()> {
+        let chunk_pos = self.cursor.position();
+        let line_number = self.chunk.lines.nth(chunk_pos as usize);
+        eprintln!("[line {}] {}", line_number, message);
+        self.reset_stack();
+        return Err(InterpretError::RuntimeError(message.to_string()));
     }
 }

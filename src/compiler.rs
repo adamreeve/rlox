@@ -210,7 +210,7 @@ impl <'a, 's> Compiler<'a, 's> {
 
     fn number(&mut self) {
         let number: Result<f64,_> = self.parser.previous.as_ref().unwrap().source.parse();
-        let value = Value::new(number.unwrap());
+        let value = Value::number(number.unwrap());
         self.emit_constant(value);
     }
 

@@ -26,7 +26,7 @@ impl<T> RunLength<T> {
     }
 }
 
-impl<T: PartialEq> RunLengthEncoded<T> {
+impl<T: PartialEq+Clone> RunLengthEncoded<T> {
     pub fn new() -> RunLengthEncoded<T> {
         RunLengthEncoded {
             run_lengths: Vec::new()
@@ -47,6 +47,10 @@ impl<T: PartialEq> RunLengthEncoded<T> {
         } else {
             self.run_lengths.push(RunLength::new(value, count));
         }
+    }
+
+    pub fn nth(&self, index: usize) -> T {
+        self.into_iter().nth(index).unwrap().clone()
     }
 }
 
