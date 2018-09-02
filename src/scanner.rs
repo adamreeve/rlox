@@ -259,7 +259,7 @@ impl <'a> Scanner<'a> {
     }
 
     fn check_keyword(&self, start: usize, rest: &str, token_type: TokenType) -> TokenType {
-        let length_matches = self.current_offset == start + rest.len();
+        let length_matches = self.current_offset - self.start_offset == start + rest.len();
         let all_chars_match = length_matches && self.current_token_source()
             .chars()
             .skip(start)
@@ -431,7 +431,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_expression() {
+    fn test_parsing_binary_numeric_expression() {
         let source = "1 + 2";
         let mut scanner = Scanner {
             source: source,
@@ -453,6 +453,31 @@ mod tests {
             let token = scanner.scan_token();
             assert_eq!(token.source, "2", "Expected third token to be 2");
             assert_eq!(token.token_type, TokenType::Number, "Expected third token to be a number");
+        }
+        {
+            let token = scanner.scan_token();
+            assert_eq!(token.token_type, TokenType::Eof, "Expected Eof token");
+        }
+    }
+
+    #[test]
+    fn test_parsing_unary_expression() {
+        let source = "!true";
+        let mut scanner = Scanner {
+            source: source,
+            start_offset: 0,
+            current_offset: 0,
+            line: 1
+        };
+        {
+            let token = scanner.scan_token();
+            assert_eq!(token.source, "!", "Expected first token source to be !");
+            assert_eq!(token.token_type, TokenType::Bang, "Expected first token to be a !");
+        }
+        {
+            let token = scanner.scan_token();
+            assert_eq!(token.source, "true", "Expected second token source to be true");
+            assert_eq!(token.token_type, TokenType::True, "Expected second token to be true");
         }
         {
             let token = scanner.scan_token();

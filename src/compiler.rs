@@ -74,6 +74,10 @@ impl <'a, 's> Compiler<'a, 's> {
         self.expression();
         self.consume(TokenType::Eof, "Expected end of expression");
         if self.parser.had_error {
+            #[cfg(feature="debug-print-code")]
+            {
+                debug::disassemble_chunk(&self.chunk, "code");
+            }
             Err(InterpretError::CompileError("Compilation error occurred".to_string()))
         } else {
             self.end_compiler();
