@@ -15,6 +15,10 @@ pub enum OpCode {
     Subtract = 8,
     Multiply = 9,
     Divide = 10,
+    Not = 11,
+    Equal = 12,
+    Greater = 13,
+    Less = 14,
 }
 
 impl OpCode {

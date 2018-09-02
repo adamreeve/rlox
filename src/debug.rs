@@ -59,6 +59,10 @@ fn disassemble_instruction_impl(chunk: &Chunk, reader: &mut Cursor<&Vec<u8>>, pr
         Some(o @ OpCode::Negate) => simple_instruction(o),
         Some(o @ OpCode::Return) => simple_instruction(o),
         Some(o @ OpCode::Subtract) => simple_instruction(o),
+        Some(o @ OpCode::Not) => simple_instruction(o),
+        Some(o @ OpCode::Equal) => simple_instruction(o),
+        Some(o @ OpCode::Greater) => simple_instruction(o),
+        Some(o @ OpCode::Less) => simple_instruction(o),
         None => {
             println!("Unknown opcode: {}", opcode_byte[0]);
         }

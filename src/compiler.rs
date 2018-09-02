@@ -104,7 +104,7 @@ impl <'a, 's> Compiler<'a, 's> {
     }
 
     fn end_compiler(&mut self) {
-        self.write_instruction(SimpleInstruction::new(OpCode::Return));
+        self.write_op_code(OpCode::Return);
         #[cfg(feature="debug-print-code")]
         {
             if !self.parser.had_error {
@@ -166,6 +166,20 @@ impl <'a, 's> Compiler<'a, 's> {
         self.chunk.write_instruction(instruction, line_no);
     }
 
+    fn write_op_code(&mut self, op_code: OpCode) {
+        let line_no = self.parser.previous.as_ref().map_or(0, |t| t.line);
+        let instruction = SimpleInstruction::new(op_code);
+        self.chunk.write_instruction(instruction, line_no);
+    }
+
+    fn write_op_codes(&mut self, op_codes: &[OpCode]) {
+        let line_no = self.parser.previous.as_ref().map_or(0, |t| t.line);
+        for op_code in op_codes {
+            let instruction = SimpleInstruction::new(op_code.clone());
+            self.chunk.write_instruction(instruction, line_no);
+        }
+    }
+
     fn emit_constant(&mut self, value: Value) {
         let line_no = self.parser.previous.as_ref().map_or(0, |t| t.line);
         if let Err(err) = self.chunk.write_constant(value, line_no) {
@@ -186,16 +200,18 @@ impl <'a, 's> Compiler<'a, 's> {
         self.parse_precedence(precedence);
 
         // Emit the operator instruction
-        let op_code = match operator_type {
-            TokenType::Plus => Some(OpCode::Add),
-            TokenType::Minus => Some(OpCode::Subtract),
-            TokenType::Star => Some(OpCode::Multiply),
-            TokenType::Slash => Some(OpCode::Divide),
-            _ => None,
-        };
-        match op_code {
-            Some(op_code) => self.write_instruction(SimpleInstruction::new(op_code)),
-            None => self.error("Invalid binary operator"),
+        match operator_type {
+            TokenType::BangEqual => self.write_op_codes(&[OpCode::Equal, OpCode::Not]),
+            TokenType::EqualEqual => self.write_op_code(OpCode::Equal),
+            TokenType::Greater => self.write_op_code(OpCode::Greater),
+            TokenType::GreaterEqual => self.write_op_codes(&[OpCode::Less, OpCode::Not]),
+            TokenType::Less => self.write_op_code(OpCode::Less),
+            TokenType::LessEqual => self.write_op_codes(&[OpCode::Greater, OpCode::Not]),
+            TokenType::Plus => self.write_op_code(OpCode::Add),
+            TokenType::Minus => self.write_op_code(OpCode::Subtract),
+            TokenType::Star => self.write_op_code(OpCode::Multiply),
+            TokenType::Slash => self.write_op_code(OpCode::Divide),
+            _ => self.error("Invalid binary operator"),
         }
     }
 
@@ -250,8 +266,11 @@ impl <'a, 's> Compiler<'a, 's> {
 
         // Emit the operator instruction
         match operator_type {
+            TokenType::Bang => {
+                self.write_op_code(OpCode::Not);
+            },
             TokenType::Minus => {
-                self.write_instruction(SimpleInstruction::new(OpCode::Negate));
+                self.write_op_code(OpCode::Negate);
             },
             _ => {
                 self.error("Invalid unary operator");
@@ -279,14 +298,14 @@ fn get_rule<'a, 's>(token: TokenType) -> ParseRule<'a, 's> {
         TokenType::Semicolon    => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::Slash        => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Factor),
         TokenType::Star         => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Factor),
-        TokenType::Bang         => ParseRule::new(None,                     None,                   Precedence::None),
-        TokenType::BangEqual    => ParseRule::new(None,                     None,                   Precedence::Equality),
+        TokenType::Bang         => ParseRule::new(Some(Compiler::unary),    None,                   Precedence::None),
+        TokenType::BangEqual    => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Equality),
         TokenType::Equal        => ParseRule::new(None,                     None,                   Precedence::None),
-        TokenType::EqualEqual   => ParseRule::new(None,                     None,                   Precedence::Equality),
-        TokenType::Greater      => ParseRule::new(None,                     None,                   Precedence::Comparison),
-        TokenType::GreaterEqual => ParseRule::new(None,                     None,                   Precedence::Comparison),
-        TokenType::Less         => ParseRule::new(None,                     None,                   Precedence::Comparison),
-        TokenType::LessEqual    => ParseRule::new(None,                     None,                   Precedence::Comparison),
+        TokenType::EqualEqual   => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Equality),
+        TokenType::Greater      => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Comparison),
+        TokenType::GreaterEqual => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Comparison),
+        TokenType::Less         => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Comparison),
+        TokenType::LessEqual    => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Comparison),
         TokenType::Identifier   => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::String       => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::Number       => ParseRule::new(Some(Compiler::number),   None,                   Precedence::None),

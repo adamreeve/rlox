@@ -32,7 +32,7 @@ impl<'a> VirtualMachine<'a> {
             let instruction = self.read_byte();
             match instruction {
                 Some(OpCode::Add) => {
-                    self.binary_op(|a, b| {a + b})?;
+                    self.binary_op(|a, b| {a + b}, Value::number)?;
                 },
                 Some(OpCode::Constant) => {
                     let value = self.read_constant();
@@ -52,10 +52,10 @@ impl<'a> VirtualMachine<'a> {
                     self.push(Value::nil());
                 },
                 Some(OpCode::Divide) => {
-                    self.binary_op(|a, b| {a / b})?;
+                    self.binary_op(|a, b| {a / b}, Value::number)?;
                 },
                 Some(OpCode::Multiply) => {
-                    self.binary_op(|a, b| {a * b})?;
+                    self.binary_op(|a, b| {a * b}, Value::number)?;
                 },
                 Some(OpCode::Negate) => {
                     match self.peek(0) {
@@ -73,7 +73,22 @@ impl<'a> VirtualMachine<'a> {
                     return Ok(());
                 },
                 Some(OpCode::Subtract) => {
-                    self.binary_op(|a, b| {a - b})?;
+                    self.binary_op(|a, b| {a - b}, Value::number)?;
+                },
+                Some(OpCode::Not) => {
+                    let value = is_falsey(self.pop());
+                    self.push(Value::bool(value));
+                },
+                Some(OpCode::Equal) => {
+                    let left = self.pop();
+                    let right = self.pop();
+                    self.push(Value::bool(values_equal(left, right)));
+                },
+                Some(OpCode::Greater) => {
+                    self.binary_op(|a, b| a > b, Value::bool)?;
+                },
+                Some(OpCode::Less) => {
+                    self.binary_op(|a, b| a < b, Value::bool)?;
                 },
                 None => {
                     let message = format!("Unrecognised op code: {:?}", instruction);
@@ -95,15 +110,15 @@ impl<'a> VirtualMachine<'a> {
         self.stack[self.stack.len() - distance - 1]
     }
 
-    fn binary_op<F>(&mut self, binary_fn: F) -> InterpretResult<()>
-        where F: Fn(f64, f64) -> f64
+    fn binary_op<F, FC, T>(&mut self, binary_fn: F, value_creator: FC) -> InterpretResult<()>
+        where F: Fn(f64, f64) -> T, FC: Fn(T) -> Value
     {
         if !(self.peek(0).is_number() && self.peek(1).is_number()) {
             return self.runtime_error("Operands must be numbers");
         }
         let b = self.pop();
         let a = self.pop();
-        self.push(Value::number(binary_fn(a.as_number(), b.as_number())));
+        self.push(value_creator(binary_fn(a.as_number(), b.as_number())));
         Ok(())
     }
 
@@ -133,5 +148,22 @@ impl<'a> VirtualMachine<'a> {
         eprintln!("[line {}] {}", line_number, message);
         self.reset_stack();
         return Err(InterpretError::RuntimeError(message.to_string()));
+    }
+}
+
+fn is_falsey(value: Value) -> bool {
+    match value {
+        Value::NilValue => true,
+        Value::BoolValue(val) => !val,
+        _ => false,
+    }
+}
+
+fn values_equal(left: Value, right: Value) -> bool {
+    match (left, right) {
+        (Value::BoolValue(left), Value::BoolValue(right)) => left == right,
+        (Value::NumberValue(left), Value::NumberValue(right)) => left == right,
+        (Value::NilValue, Value::NilValue) => true,
+        (_, _) => false,
     }
 }
