@@ -208,6 +208,16 @@ impl <'a, 's> Compiler<'a, 's> {
         self.consume(TokenType::RightParen, "Expected ')' after expression");
     }
 
+    fn literal(&mut self) {
+        let op = self.parser.previous.as_ref().unwrap().token_type;
+        match op {
+            TokenType::True => self.write_instruction(SimpleInstruction::new(OpCode::True)),
+            TokenType::False => self.write_instruction(SimpleInstruction::new(OpCode::False)),
+            TokenType::Nil => self.write_instruction(SimpleInstruction::new(OpCode::Nil)),
+            _ => panic!("Invalid literal opcode"),
+        }
+    }
+
     fn number(&mut self) {
         let number: Result<f64,_> = self.parser.previous.as_ref().unwrap().source.parse();
         let value = Value::number(number.unwrap());
@@ -283,17 +293,17 @@ fn get_rule<'a, 's>(token: TokenType) -> ParseRule<'a, 's> {
         TokenType::And          => ParseRule::new(None,                     None,                   Precedence::And),
         TokenType::Class        => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::Else         => ParseRule::new(None,                     None,                   Precedence::None),
-        TokenType::False        => ParseRule::new(None,                     None,                   Precedence::None),
+        TokenType::False        => ParseRule::new(Some(Compiler::literal),  None,                   Precedence::None),
         TokenType::Fun          => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::For          => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::If           => ParseRule::new(None,                     None,                   Precedence::None),
-        TokenType::Nil          => ParseRule::new(None,                     None,                   Precedence::None),
+        TokenType::Nil          => ParseRule::new(Some(Compiler::literal),  None,                   Precedence::None),
         TokenType::Or           => ParseRule::new(None,                     None,                   Precedence::Or),
         TokenType::Print        => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::Return       => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::Super        => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::This         => ParseRule::new(None,                     None,                   Precedence::None),
-        TokenType::True         => ParseRule::new(None,                     None,                   Precedence::None),
+        TokenType::True         => ParseRule::new(Some(Compiler::literal),  None,                   Precedence::None),
         TokenType::Var          => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::While        => ParseRule::new(None,                     None,                   Precedence::None),
         TokenType::Error        => ParseRule::new(None,                     None,                   Precedence::None),

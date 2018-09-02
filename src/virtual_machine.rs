@@ -42,6 +42,15 @@ impl<'a> VirtualMachine<'a> {
                     let value = self.read_constant_long();
                     self.push(value);
                 },
+                Some(OpCode::True) => {
+                    self.push(Value::bool(true));
+                },
+                Some(OpCode::False) => {
+                    self.push(Value::bool(false));
+                },
+                Some(OpCode::Nil) => {
+                    self.push(Value::nil());
+                },
                 Some(OpCode::Divide) => {
                     self.binary_op(|a, b| {a / b})?;
                 },

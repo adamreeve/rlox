@@ -7,11 +7,14 @@ pub enum OpCode {
     Return = 0,
     Constant = 1,
     ConstantLong = 2,
-    Negate = 3,
-    Add = 4,
-    Subtract = 5,
-    Multiply = 6,
-    Divide = 7,
+    Nil = 3,
+    True = 4,
+    False = 5,
+    Negate = 6,
+    Add = 7,
+    Subtract = 8,
+    Multiply = 9,
+    Divide = 10,
 }
 
 impl OpCode {
