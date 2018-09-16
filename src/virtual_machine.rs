@@ -69,7 +69,6 @@ impl<'a> VirtualMachine<'a> {
                     }
                 },
                 Some(OpCode::Return) => {
-                    println!("{}", self.pop());
                     return Ok(());
                 },
                 Some(OpCode::Subtract) => {
