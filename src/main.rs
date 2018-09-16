@@ -7,12 +7,14 @@ extern crate num_traits;
 mod chunk;
 mod errors;
 mod instructions;
-mod debug;
 mod run_length_encoding;
 mod value;
 mod virtual_machine;
 mod compiler;
 mod scanner;
+
+#[cfg(any(feature="debug-print-code", feature="debug-trace-execution"))]
+mod debug;
 
 use clap::{Arg, App};
 use errors::InterpretResult;

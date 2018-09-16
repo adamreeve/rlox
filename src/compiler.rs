@@ -3,6 +3,7 @@ use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 
 use chunk::Chunk;
+#[cfg(feature="debug-print-code")]
 use debug;
 use errors::{InterpretError, InterpretResult};
 use instructions::*;

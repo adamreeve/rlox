@@ -20,24 +20,10 @@ impl Value {
         Value::NumberValue(val)
     }
 
-    pub fn as_bool(&self) -> bool {
-        match &self {
-            &Value::BoolValue(val) => val.clone(),
-            _ => panic!("Value is not a BoolValue"),
-        }
-    }
-
     pub fn as_number(&self) -> f64 {
         match &self {
             &Value::NumberValue(val) => val.clone(),
             _ => panic!("Value is not a NumberValue"),
-        }
-    }
-
-    pub fn is_bool(&self) -> bool {
-        match &self {
-            &Value::BoolValue(_) => true,
-            _ => false,
         }
     }
 

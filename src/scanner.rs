@@ -223,7 +223,7 @@ impl <'a> Scanner<'a> {
     }
 
     fn identifier_token(&mut self) -> Token<'a> {
-        while is_some_where(self.peek(), &|c| {is_alpha(c) || is_digit(c)}) {
+        while is_some_where(self.peek(), &is_alphanumeric) {
             self.advance();
         }
         return self.make_token(self.identifier_type());

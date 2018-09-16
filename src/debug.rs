@@ -1,8 +1,11 @@
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read};
+#[cfg(any(feature="debug-trace-execution"))]
+use std::io::{Seek, SeekFrom};
 
 use ::chunk::Chunk;
 use ::instructions::*;
 
+#[cfg(any(feature="debug-print-code"))]
 pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
     println!("== {} ==", name);
 
@@ -22,6 +25,7 @@ pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
     }
 }
 
+#[cfg(any(feature="debug-trace-execution"))]
 pub fn disassemble_instruction(chunk: &Chunk, offset: usize) {
     let line = chunk.lines.into_iter().nth(offset).unwrap();
     let prev_line = if offset > 0 { chunk.lines.into_iter().nth(offset - 1) } else { None };
