@@ -1,7 +1,7 @@
 use std;
 use ::errors::{InterpretResult, InterpretError};
 use ::instructions::*;
-use ::util::RunLengthEncoded;
+use ::run_length_encoding::RunLengthEncoded;
 use ::value::Value;
 
 pub struct Chunk {

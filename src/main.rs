@@ -8,7 +8,7 @@ mod chunk;
 mod errors;
 mod instructions;
 mod debug;
-mod util;
+mod run_length_encoding;
 mod value;
 mod virtual_machine;
 mod compiler;
