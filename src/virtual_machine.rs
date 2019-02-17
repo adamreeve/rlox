@@ -4,6 +4,7 @@ use ::errors::{InterpretError, InterpretResult};
 use ::instructions;
 use ::instructions::InstructionRead;
 use ::instructions::OpCode;
+use ::object;
 use ::value::Value;
 
 pub struct VirtualMachine<'a> {
@@ -58,9 +59,9 @@ impl<'a> VirtualMachine<'a> {
                     self.binary_op(|a, b| {a * b}, Value::number)?;
                 },
                 Some(OpCode::Negate) => {
-                    match self.peek(0) {
+                    let value = self.pop();
+                    match value {
                         Value::NumberValue(value) => {
-                            self.pop();
                             self.push(Value::number(-value));
                         },
                         _ => {
@@ -105,8 +106,8 @@ impl<'a> VirtualMachine<'a> {
         self.stack.pop().unwrap()
     }
 
-    fn peek(&self, distance: usize) -> Value {
-        self.stack[self.stack.len() - distance - 1]
+    fn peek(&self, distance: usize) -> &Value {
+        &self.stack[self.stack.len() - distance - 1]
     }
 
     fn binary_op<F, FC, T>(&mut self, binary_fn: F, value_creator: FC) -> InterpretResult<()>
@@ -129,12 +130,12 @@ impl<'a> VirtualMachine<'a> {
 
     fn read_constant(&mut self) -> Value {
         let instruction = instructions::ConstantInstruction::parse(&mut self.cursor);
-        self.chunk.constants[instruction.constant_index as usize]
+        self.chunk.constants[instruction.constant_index as usize].clone()
     }
 
     fn read_constant_long(&mut self) -> Value {
         let instruction = instructions::ConstantLongInstruction::parse(&mut self.cursor);
-        self.chunk.constants[instruction.constant_index as usize]
+        self.chunk.constants[instruction.constant_index as usize].clone()
     }
 
     fn reset_stack(&mut self) {
@@ -163,6 +164,7 @@ fn values_equal(left: Value, right: Value) -> bool {
         (Value::BoolValue(left), Value::BoolValue(right)) => left == right,
         (Value::NumberValue(left), Value::NumberValue(right)) => left == right,
         (Value::NilValue, Value::NilValue) => true,
+        (Value::ObjValue(left), Value::ObjValue(right)) => object::objects_equal(&*left, &*right),
         (_, _) => false,
     }
 }

@@ -7,6 +7,7 @@ extern crate num_traits;
 mod chunk;
 mod errors;
 mod instructions;
+mod object;
 mod run_length_encoding;
 mod value;
 mod virtual_machine;

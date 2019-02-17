@@ -1,10 +1,13 @@
 use std::fmt;
+use std::rc::Rc;
+use ::object::{LoxObject};
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone)]
 pub enum Value {
     NilValue,
     BoolValue(bool),
     NumberValue(f64),
+    ObjValue(Rc<LoxObject>)
 }
 
 impl Value {
@@ -33,6 +36,18 @@ impl Value {
             _ => false,
         }
     }
+
+    pub fn is_string(&self) -> bool {
+        match self {
+            Value::ObjValue(obj) => {
+                match **obj {
+                    LoxObject::String(_) => true,
+                    // _ => false,
+                }
+            },
+            _ => false
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -41,6 +56,7 @@ impl fmt::Display for Value {
             &Value::NilValue => write!(f, "Nil"),
             &Value::BoolValue(val) => write!(f, "Bool({})", val),
             &Value::NumberValue(val) => write!(f, "Number({})", val),
+            &Value::ObjValue(val) => (**val).fmt(f),
         }
     }
 }

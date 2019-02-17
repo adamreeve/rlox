@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::rc::Rc;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 
@@ -7,6 +8,7 @@ use chunk::Chunk;
 use debug;
 use errors::{InterpretError, InterpretResult};
 use instructions::*;
+use object::LoxObject;
 use scanner::{Scanner, Token, TokenType};
 use value::Value;
 
@@ -245,6 +247,13 @@ impl <'a, 's> Compiler<'a, 's> {
         self.emit_constant(value);
     }
 
+    fn string(&mut self) {
+        let token_source = self.parser.previous.as_ref().unwrap().source;
+        let string_value = token_source[1..token_source.len() - 1].to_string();
+        let value = Value::ObjValue(Rc::new(LoxObject::String(string_value)));
+        self.emit_constant(value);
+    }
+
     fn parse_precedence(&mut self, precedence: Precedence) {
         self.advance();
         let parse_rule = get_rule(self.previous_token_type());
@@ -312,7 +321,7 @@ fn get_rule<'a, 's>(token: TokenType) -> ParseRule<'a, 's> {
         TokenType::Less         => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Comparison),
         TokenType::LessEqual    => ParseRule::new(None,                     Some(Compiler::binary), Precedence::Comparison),
         TokenType::Identifier   => ParseRule::new(None,                     None,                   Precedence::None),
-        TokenType::String       => ParseRule::new(None,                     None,                   Precedence::None),
+        TokenType::String       => ParseRule::new(Some(Compiler::string),   None,                   Precedence::None),
         TokenType::Number       => ParseRule::new(Some(Compiler::number),   None,                   Precedence::None),
         TokenType::And          => ParseRule::new(None,                     None,                   Precedence::And),
         TokenType::Class        => ParseRule::new(None,                     None,                   Precedence::None),
