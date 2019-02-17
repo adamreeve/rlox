@@ -79,12 +79,12 @@ fn simple_instruction(opcode: OpCode) {
 
 fn constant_instruction<R: Read>(opcode: OpCode, chunk: &Chunk, reader: &mut R) {
     let ConstantInstruction { constant_index } = ConstantInstruction::parse(reader);
-    let value = chunk.constants[constant_index as usize];
+    let value = chunk.constants[constant_index as usize].clone();
     println!("OpCode::{:?} {:4} '{}'", opcode, constant_index, value);
 }
 
 fn constant_long_instruction<R: Read>(opcode: OpCode, chunk: &Chunk, reader: &mut R) {
     let ConstantLongInstruction { constant_index } = ConstantLongInstruction::parse(reader);
-    let value = chunk.constants[constant_index as usize];
+    let value = chunk.constants[constant_index as usize].clone();
     println!("OpCode::{:?} {:4} '{}'", opcode, constant_index, value);
 }
