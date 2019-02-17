@@ -48,6 +48,18 @@ impl Value {
             _ => false
         }
     }
+
+    pub fn as_string(&self) -> String {
+        match &self {
+            Value::ObjValue(obj) => {
+                match **obj {
+                    LoxObject::String(ref s) => s.to_string(),
+                    // _ => panic!("Object is not a String"),
+                }
+            },
+            _ => panic!("Value is not an ObjValue"),
+        }
+    }
 }
 
 impl fmt::Display for Value {

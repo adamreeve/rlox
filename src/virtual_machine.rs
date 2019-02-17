@@ -1,10 +1,13 @@
 use std::io::{Cursor, Read};
+use std::rc::Rc;
+
 use ::chunk::Chunk;
 use ::errors::{InterpretError, InterpretResult};
 use ::instructions;
 use ::instructions::InstructionRead;
 use ::instructions::OpCode;
 use ::object;
+use ::object::{LoxObject};
 use ::value::Value;
 
 pub struct VirtualMachine<'a> {
@@ -33,7 +36,19 @@ impl<'a> VirtualMachine<'a> {
             let instruction = self.read_byte();
             match instruction {
                 Some(OpCode::Add) => {
-                    self.binary_op(|a, b| {a + b}, Value::number)?;
+                    if self.peek(0).is_string() && self.peek(1).is_string() {
+                        let b = self.pop();
+                        let a = self.pop();
+                        self.push(Value::ObjValue(Rc::new(LoxObject::String(format!("{}{}", a.as_string(), b.as_string())))));
+                    }
+                    else if self.peek(0).is_number() && self.peek(1).is_number() {
+                        let b = self.pop();
+                        let a = self.pop();
+                        self.push(Value::number(a.as_number() + b.as_number()));
+                    }
+                    else {
+                        return self.runtime_error("Operands must be two numbers or two strings");
+                    }
                 },
                 Some(OpCode::Constant) => {
                     let value = self.read_constant();
