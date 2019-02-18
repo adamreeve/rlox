@@ -2,6 +2,7 @@ extern crate byteorder;
 extern crate clap;
 #[macro_use]
 extern crate enum_primitive_derive;
+extern crate fnv;
 extern crate num_traits;
 
 mod chunk;
@@ -13,6 +14,7 @@ mod value;
 mod virtual_machine;
 mod compiler;
 mod scanner;
+mod string_interner;
 
 #[cfg(any(feature="debug-print-code", feature="debug-trace-execution"))]
 mod debug;
